@@ -1,0 +1,31 @@
+[0m14:00:25.798661 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7284f3208c80>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7284f0b70b90>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7284f12075c0>]}
+
+
+============================== 14:00:25.830294 | 6007f34a-71a3-4dad-a54a-5fa3d0707da0 ==============================
+[0m14:00:25.830294 [info ] [MainThread]: Running with dbt=1.10.13
+[0m14:00:25.830667 [debug] [MainThread]: running dbt with arguments {'warn_error': 'None', 'log_format': 'default', 'debug': 'False', 'printer_width': '80', 'fail_fast': 'False', 'log_path': 'logs', 'static_parser': 'True', 'target_path': 'None', 'empty': 'None', 'profiles_dir': '/home/dai/.dbt', 'indirect_selection': 'eager', 'log_cache_events': 'False', 'cache_selected_only': 'False', 'invocation_command': 'dbt init taxi_nyc_pipeline', 'introspect': 'True', 'no_print': 'None', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'send_anonymous_usage_stats': 'True', 'use_experimental_parser': 'False', 'quiet': 'False', 'partial_parse': 'True', 'write_json': 'True', 'use_colors': 'True', 'version_check': 'True'}
+[0m14:00:25.862118 [info ] [MainThread]: Creating dbt configuration folder at /home/dai/.dbt
+[0m14:00:25.863120 [debug] [MainThread]: Starter project path: /home/dai/Documents/Python_Projects/Taxi_NYC_Analyse/.venv/lib/python3.12/site-packages/dbt/include/starter_project
+[0m14:00:25.864336 [info ] [MainThread]: 
+Your new dbt project "taxi_nyc_pipeline" was created!
+
+For more information on how to configure the profiles.yml file,
+please consult the dbt documentation here:
+
+  https://docs.getdbt.com/docs/configure-your-profile
+
+One more thing:
+
+Need help? Don't hesitate to reach out to us via GitHub issues or on Slack:
+
+  https://community.getdbt.com/
+
+Happy modeling!
+
+[0m14:00:25.864677 [info ] [MainThread]: Setting up your profile.
+[0m14:10:16.859044 [info ] [MainThread]: Profile taxi_nyc_pipeline written to /home/dai/.dbt/profiles.yml using target's profile_template.yml and your supplied values. Run 'dbt debug' to validate the connection.
+[0m14:10:16.864152 [debug] [MainThread]: Resource report: {"command_name": "init", "command_success": true, "command_wall_clock_time": 591.10114, "process_in_blocks": "88", "process_kernel_time": 0.084807, "process_mem_max_rss": "121052", "process_out_blocks": "1416", "process_user_time": 1.008711}
+[0m14:10:16.866235 [debug] [MainThread]: Command `dbt init` succeeded at 14:10:16.865878 after 591.10 seconds
+[0m14:10:16.866938 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7284f0bd8740>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7284f01aed20>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x7284f0da79e0>]}
+[0m14:10:16.867693 [debug] [MainThread]: Flushing usage events
+[0m14:10:17.293734 [debug] [MainThread]: An error was encountered while trying to flush usage events

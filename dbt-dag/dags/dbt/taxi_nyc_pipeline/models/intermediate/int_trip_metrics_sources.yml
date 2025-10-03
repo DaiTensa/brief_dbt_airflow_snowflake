@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: int_taxi_data
+    description: "Données intérmédiaires Taxi NYC chargées depuis  STAGING"
+    database: NYC_TAXI_DB
+    schema: STAGING
+    tables:
+      - name: stg_yellow_taxi_trips
