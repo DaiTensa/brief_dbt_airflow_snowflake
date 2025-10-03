@@ -1,4 +1,4 @@
-FROM quay.io/astronomer/astro-runtime:12.8.0
+FROM quay.io/astronomer/astro-runtime:12.10.0 
 
 COPY ./requirements.txt /tmp/requirements.txt
 

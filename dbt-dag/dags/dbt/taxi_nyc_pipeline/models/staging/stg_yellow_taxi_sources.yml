@@ -7,3 +7,11 @@ sources:
     schema: RAW
     tables:
       - name: YELLOW_TAXI_TRIPS
+        columns:
+          - name: VendorID
+            tests:
+              - not_null
+              - accepted_values:
+                  values: [0, 1, 2]
+
+        
