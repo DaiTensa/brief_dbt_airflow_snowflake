@@ -1,0 +1,59 @@
+version: 2
+
+models:
+  - name: daily_summary
+    description: "Résumé quotidien des trajets de taxis"
+    columns:
+      - name: date
+        description: "Date du résumé"
+        tests:
+          - unique
+          - not_null
+      
+      - name: trip_count
+        description: "Nombre de trajets"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+      
+      - name: total_revenue
+        description: "Revenus totaux"
+        tests:
+          - not_null
+
+  - name: zone_analysis
+    description: "Analyse des trajets par zone de départ"
+    columns:
+      - name: pickup_location_id
+        description: "Zone de prise en charge"
+        tests:
+          - unique
+          - not_null
+      
+      - name: trip_count
+        description: "Nombre de trajets depuis cette zone"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+
+  - name: hourly_patterns
+    description: "Patterns de demande par heure de la journée"
+    columns:
+      - name: pickup_hour
+        description: "Heure de prise en charge (0-23)"
+        tests:
+          - unique
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 23
+              inclusive: true
+      
+      - name: trip_count
+        description: "Nombre de trajets à cette heure"
+        tests:
+          - not_null

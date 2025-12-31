@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: int_trip_metrics
+    description: "Trajets enrichis avec catégorisations business"
+    columns:
+      - name: trip_id
+        description: "Identifiant unique du trajet"
+        tests:
+          - unique
+          - not_null
+      
+      - name: distance_category
+        description: "Catégorie de distance du trajet"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Courts trajets', 'Trajets moyens', 'Longs trajets', 'Très longs trajets']
+      
+      - name: time_period
+        description: "Période temporelle du trajet"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Rush Matinal', 'Journée', 'Rush Soir', 'Soirée', 'Nuit']
+      
+      - name: day_type
+        description: "Type de jour (Semaine ou Weekend)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Semaine', 'Weekend']

@@ -1,0 +1,75 @@
+version: 2
+
+models:
+  - name: stg_yellow_taxi_trips
+    description: "Données nettoyées et enrichies des trajets de taxis jaunes NYC"
+    columns:
+      - name: trip_id
+        description: "Identifiant unique du trajet (clé surrogate)"
+        tests:
+          - not_null
+      
+      - name: vendor_id
+        description: "ID du fournisseur de taxi"
+        tests:
+          - not_null
+      
+      - name: pickup_location_id
+        description: "Zone de prise en charge"
+        tests:
+          - not_null
+      
+      - name: dropoff_location_id
+        description: "Zone de dépose"
+        tests:
+          - not_null
+      
+      - name: pickup_datetime
+        description: "Date et heure de prise en charge"
+        tests:
+          - not_null
+      
+      - name: dropoff_datetime
+        description: "Date et heure de dépose"
+        tests:
+          - not_null
+      
+      - name: trip_distance
+        description: "Distance du trajet en miles"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.1
+              max_value: 100
+      
+      - name: fare_amount
+        description: "Montant du tarif"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+      
+      - name: total_amount
+        description: "Montant total payé"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+      
+      - name: duration_minutes
+        description: "Durée du trajet en minutes"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+      
+      - name: avg_speed_mph
+        description: "Vitesse moyenne en miles par heure"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+              inclusive: true
