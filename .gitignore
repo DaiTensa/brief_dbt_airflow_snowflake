@@ -11,4 +11,6 @@ wheels/
 
 # Files
 INITIALISATION_WH_DB.sql
-Brief_Taxi_Snowflake_DBT.md
+
+# Logs
+logs
