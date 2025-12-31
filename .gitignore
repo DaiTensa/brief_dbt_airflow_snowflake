@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Files
+INITIALISATION_WH_DB.sql
+Brief_Taxi_Snowflake_DBT.md
