@@ -1,0 +1,48 @@
+name: Deploy dbt Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dbt-dag/dags/dbt/taxi_nyc_pipeline/models/**'
+      - 'dbt-dag/dags/dbt/taxi_nyc_pipeline/dbt_project.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dbt
+        run: |
+          pip install dbt-core dbt-snowflake
+      
+      - name: Generate dbt documentation
+        run: |
+          cd dbt-dag/dags/dbt/taxi_nyc_pipeline
+          dbt docs generate --no-compile
+      
+      - name: Copy documentation to docs folder
+        run: |
+          mkdir -p docs
+          cp dbt-dag/dags/dbt/taxi_nyc_pipeline/target/index.html docs/
+          cp dbt-dag/dags/dbt/taxi_nyc_pipeline/target/manifest.json docs/
+          cp dbt-dag/dags/dbt/taxi_nyc_pipeline/target/catalog.json docs/
+          cp dbt-dag/dags/dbt/taxi_nyc_pipeline/target/graph.gpickle docs/
+      
+      - name: Commit and push documentation
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update dbt documentation [skip ci]"
+          git push

@@ -240,6 +240,21 @@ Les tables MARTS permettent d'analyser :
 
 ---
 
+## Documentation dbt
+
+La documentation interactive des modèles dbt est disponible en ligne :
+**[Documentation dbt](https://DaiTensa.github.io/brief_dbt_airflow_snowflake/)**
+
+Cette documentation inclut :
+- Lignage des données (graphe de dépendances)
+- Description de chaque modèle et colonne
+- Liste des tests de qualité
+- Code SQL source
+
+La documentation est automatiquement mise à jour à chaque push via GitHub Actions.
+
+---
+
 ## Technologies Utilisées
 
 - **Snowflake** : Data Warehouse cloud
