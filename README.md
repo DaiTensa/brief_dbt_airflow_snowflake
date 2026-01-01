@@ -250,8 +250,64 @@ Cette documentation inclut :
 - Description de chaque modèle et colonne
 - Liste des tests de qualité
 - Code SQL source
+- Métadonnées complètes depuis Snowflake
 
-La documentation est automatiquement mise à jour à chaque push via GitHub Actions.
+### Générer la documentation localement
+
+Pour générer et déployer la documentation dbt manuellement :
+
+#### 1. Générer la documentation depuis le conteneur Airflow
+
+```bash
+# Générer la documentation avec connexion Snowflake
+docker exec $(docker ps -q -f name=scheduler) /bin/bash -c \
+  "cd /usr/local/airflow/dags/dbt/taxi_nyc_pipeline && \
+   /usr/local/airflow/dbt_venv/bin/dbt docs generate"
+```
+
+#### 2. Copier les fichiers vers le dossier docs/
+
+```bash
+cd /home/dai/Documents/Python_Projects/Taxi_NYC_Analyse
+
+docker cp $(docker ps -q -f name=scheduler):/usr/local/airflow/dags/dbt/taxi_nyc_pipeline/target/index.html docs/
+docker cp $(docker ps -q -f name=scheduler):/usr/local/airflow/dags/dbt/taxi_nyc_pipeline/target/manifest.json docs/
+docker cp $(docker ps -q -f name=scheduler):/usr/local/airflow/dags/dbt/taxi_nyc_pipeline/target/catalog.json docs/
+docker cp $(docker ps -q -f name=scheduler):/usr/local/airflow/dags/dbt/taxi_nyc_pipeline/target/graph.gpickle docs/
+```
+
+#### 3. Déployer sur GitHub Pages
+
+```bash
+git add docs/
+git commit -m "Update dbt documentation"
+git push origin main
+```
+
+La documentation sera automatiquement déployée sur GitHub Pages en 1-2 minutes.
+
+### Configuration GitHub Pages (première fois uniquement)
+
+1. Allez dans **Settings** → **Pages** de votre repository
+2. **Source** : Deploy from a branch
+3. **Branch** : `main`
+4. **Folder** : `/docs`
+5. Cliquez sur **Save**
+
+### Configuration optionnelle : Workflow automatique
+
+Pour automatiser la génération de documentation à chaque push, configurez les secrets GitHub :
+
+1. Allez dans **Settings** → **Secrets and variables** → **Actions**
+2. Ajoutez les secrets suivants :
+   - `SNOWFLAKE_ACCOUNT` : Votre identifiant de compte Snowflake
+   - `SNOWFLAKE_USER` : `dbt_taxi`
+   - `SNOWFLAKE_PASSWORD` : Mot de passe de l'utilisateur dbt_taxi
+   - `SNOWFLAKE_ROLE` : `TRANSFORM`
+   - `SNOWFLAKE_WAREHOUSE` : `NYC_TAXI_WH`
+   - `SNOWFLAKE_DATABASE` : `NYC_TAXI_DB`
+
+Le workflow `.github/workflows/deploy-dbt-docs.yml` se déclenchera automatiquement à chaque modification des modèles dbt.
 
 ---
 
