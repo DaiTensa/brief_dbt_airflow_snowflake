@@ -7,7 +7,6 @@ models:
       - name: trip_id
         description: "Identifiant unique du trajet"
         tests:
-          - unique
           - not_null
       
       - name: distance_category

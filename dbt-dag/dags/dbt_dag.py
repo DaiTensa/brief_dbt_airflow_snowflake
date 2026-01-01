@@ -28,7 +28,7 @@ with DbtDag(
     ),
     # Render config to select specific models if needed, or default to all
     render_config=RenderConfig(
-        select=["path:models/staging", "path:models/marts"]
+        select=["path:models/staging", "path:models/intermediate", "path:models/marts"]
     ),
     schedule_interval=None,
     start_date=datetime(2023, 9, 10),
