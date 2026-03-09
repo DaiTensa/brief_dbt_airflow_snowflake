@@ -46,24 +46,40 @@ Fichiers Parquet → RAW → STAGING → INTERMEDIATE → MARTS
 
 ### 1. Configuration Snowflake
 
-Exécutez le script SQL d'initialisation dans Snowflake :
+Exécutez le script SQL d'initialisation dans la console Snowflake :
 ```sql
--- Voir snowflake/workspace/EXEMPLE_INITIALISATION_WH_DB.sql
--- Crée : Warehouse, Database, Schemas, User, Permissions
+-- Voir snowflake/INITIALISATION_WH_DB.sql
+-- Crée : role TRANSFORM, Warehouse NYC_TAXI_WH, Database NYC_TAXI_DB, User dbt_taxi, Permissions
 ```
+
+**Preuves de configuration Snowflake** :
+
+![Init Snowflake](Screenshots/01_INIT_SNOWFLAKE_TAXI.png)
+*Initialisation du compte Snowflake*
+
+![Compute Warehouse](Screenshots/02_COMPUTE_TAXI_WH.png)
+*Création du Warehouse NYC_TAXI_WH*
+
+![Warehouse créé](Screenshots/03_TAXI_WH_CREATION.png)
+*Warehouse opérationnel*
+
+![Test User & Database](Screenshots/05_1_TEST_USER_DATABASE.png)
+*Vérification de l'utilisateur dbt_taxi et de la database NYC_TAXI_DB*
+
+![Test User & Database 2](Screenshots/05_2_TEST_USER_DATABASE.png)
+*Vérification des permissions*
 
 ### 2. Configuration Airflow
 
 Copiez et configurez les fichiers d'environnement :
 ```bash
 cd dbt-dag
-cp airflow_settings.yml.exemple airflow_settings.yaml
 cp .env.exemple .env
 ```
 
 Éditez `.env` avec vos credentials Snowflake :
 ```bash
-SF_ACCOUNT=votre-compte
+SF_ACCOUNT=votre-account-identifier
 SF_USER=dbt_taxi
 SF_PASSWORD=votre-mot-de-passe
 SF_ROLE=TRANSFORM
@@ -81,6 +97,12 @@ astro dev start
 
 Accédez à l'interface : `http://localhost:8080` (admin/admin)
 
+![Lancement Airflow](Screenshots/06_LANCEMENT_ASTRO_DEV.png)
+*Démarrage d'Airflow avec Astro CLI*
+
+![DAGs disponibles](Screenshots/07_Dags_Taxi.png)
+*DAGs taxi_ingestion_dag et dbt_transformation_dag disponibles dans Airflow*
+
 ---
 
 ## Exécution du Pipeline
@@ -94,38 +116,76 @@ Accédez à l'interface : `http://localhost:8080` (admin/admin)
 
 > Le script est **idempotent** : si un mois est déjà chargé, il est automatiquement ignoré.
 
+**Preuves d'exécution** :
+
+![Ingestion en cours](Screenshots/08_Ingestion_Data_Taxi.png)
+*DAG taxi_ingestion_dag en cours d'exécution*
+
+![Téléchargement Parquet](Screenshots/09_Downloading_Parquet_Taxi.png)
+*Téléchargement des fichiers Parquet mensuels*
+
+![Fin téléchargement](Screenshots/10_End_Downloading_Parquet.png)
+*Ingestion des 12 mois terminée avec succès*
+
 **Vérification dans Snowflake** :
+
+> **Note** : Les colonnes datetime sont stockées en `NUMBER` (microsecondes epoch). Utiliser `TO_TIMESTAMP` pour les convertir.
+
 ```sql
 SELECT COUNT(*) FROM NYC_TAXI_DB.RAW.YELLOW_TAXI_TRIPS;
 -- ~40 millions de trajets (2024 complet)
 
 -- Vérification par mois
-SELECT MONTH(TPEP_PICKUP_DATETIME) as mois, COUNT(*) as nb_trajets
+SELECT
+    MONTH(TO_TIMESTAMP(TPEP_PICKUP_DATETIME / 1000000)) as mois,
+    COUNT(*) as nb_trajets
 FROM NYC_TAXI_DB.RAW.YELLOW_TAXI_TRIPS
 GROUP BY 1
 ORDER BY 1;
+-- Doit retourner 12 lignes (janvier → décembre 2024)
 ```
 
-**Preuve d'exécution** :
+![Aperçu données RAW](Screenshots/11_Data_Preview_Exemple.png)
+*Aperçu des données brutes dans RAW.YELLOW_TAXI_TRIPS*
 
-![DAG Ingestion - Succès](Screenshots/01_airflow_ingestion_dag_success.png)
-*DAG d'ingestion exécuté avec succès dans Airflow*
+![Structure table 1](Screenshots/12_DESCRIBE_1.png)
+*Structure de la table RAW.YELLOW_TAXI_TRIPS (colonnes 1/5)*
 
-![Snowflake - Comptage des données](Screenshots/02_snowflake_raw_data_count.png)
-*Vérification du nombre de lignes chargées dans Snowflake (~40M)*
+![Structure table 2](Screenshots/12_DESCRIBE_2.png)
+*Structure de la table RAW.YELLOW_TAXI_TRIPS (colonnes 2/5)*
 
-![Snowflake - Aperçu des données](Screenshots/03_snowflake_raw_data_preview.png)
-*Aperçu des données brutes dans la table RAW.YELLOW_TAXI_TRIPS*
+![Structure table 3](Screenshots/12_DESCRIBE_3.png)
+*Structure de la table RAW.YELLOW_TAXI_TRIPS (colonnes 3/5)*
+
+![Structure table 4](Screenshots/12_DESCRIBE_4.png)
+*Structure de la table RAW.YELLOW_TAXI_TRIPS (colonnes 4/5)*
+
+![Structure table 5](Screenshots/12_DESCRIBE_5.png)
+*Structure de la table RAW.YELLOW_TAXI_TRIPS (colonnes 5/5)*
 
 ### Étape 2 : Transformation dbt
 
 1. Dans Airflow, activez le DAG `dbt_transformation_dag`
 2. Déclenchez-le manuellement
 3. **Durée estimée** : 5-10 minutes
-4. **Résultat** : 
+4. **Résultat** :
    - Vue `STAGING.stg_yellow_taxi_trips`
    - Vue `INTERMEDIATE.int_trip_metrics`
    - Tables `MARTS.*` (daily_summary, zone_analysis, hourly_patterns)
+
+**Preuves d'exécution** :
+
+![DAG dbt - Exécution](Screenshots/13_DBT_TRANSFORMATION_1.png)
+*DAG de transformation dbt en cours d'exécution*
+
+![DBT staging](Screenshots/13_DBT_TRANSFORMATION_stg_yellow_taxi_trips.png)
+*Modèle stg_yellow_taxi_trips - 15 tests au vert*
+
+![DBT intermediate](Screenshots/13_DBT_TRANSFORMATION_int_fact.png)
+*Modèle int_trip_metrics exécuté avec succès*
+
+![Snowflake - Tables MARTS](Screenshots/14_DBT_TRANSFORMATION_RESULT_SNOWFLAKE.png)
+*Tables finales créées dans le schéma MARTS de Snowflake*
 
 **Vérification dans Snowflake** :
 ```sql
@@ -142,44 +202,28 @@ SELECT * FROM NYC_TAXI_DB.MARTS.zone_analysis ORDER BY trip_count DESC LIMIT 10;
 SELECT * FROM NYC_TAXI_DB.MARTS.hourly_patterns ORDER BY pickup_hour;
 ```
 
-**Preuve d'exécution** :
-
-![DAG dbt - En cours](Screenshots/04_airflow_dbt_dag_running.png)
-*DAG de transformation dbt en cours d'exécution*
-
-![DAG dbt - Succès](Screenshots/05_airflow_dbt_dag_success.png)
-*DAG de transformation dbt terminé avec succès*
-
-![Tests dbt - Succès](Screenshots/06_dbt_tests_success.png)
-*15 tests de qualité dbt passés avec succès*
-
-![Snowflake - Tables MARTS](Screenshots/07_snowflake_marts_tables.png)
-*Tables finales créées dans le schéma MARTS de Snowflake*
-
 ---
 
 ## Tests de Qualité
 
 Le pipeline inclut **15 tests dbt automatiques** :
 - Tests de non-nullité sur colonnes essentielles
-- Tests de plages de valeurs (distances 0.1-100 miles, vitesse 0-100 mph)
+- Tests de plages de valeurs (distances 0.1-100 miles, vitesse 0-150 mph)
 - Tests de cohérence des montants (>= 0)
 - Tests de catégorisations (distance, période, jour)
 
-**Exécution manuelle** :
-```bash
-cd dbt-dag/dags/dbt/taxi_nyc_pipeline
-dbt test
-```
+Résultat : **PASS=15 WARN=0 ERROR=0**
 
 ---
 
 ## Transformations Implémentées
 
 ### Nettoyage des Données (Staging)
+- Conversion des timestamps NUMBER (microsecondes epoch) en TIMESTAMP via `TO_TIMESTAMP(col / 1000000)`
 - Filtrage des montants négatifs
 - Exclusion des trajets avec dates incohérentes
 - Suppression des distances aberrantes (< 0.1 ou > 100 miles)
+- Filtrage des vitesses aberrantes (> 150 mph — erreurs GPS/timestamps)
 - Gestion des valeurs manquantes
 
 ### Enrichissements (Staging)
@@ -201,7 +245,7 @@ dbt test
 2. **Script d'ingestion Python** : `ingest_data.py` — téléchargement et chargement automatisé des fichiers Parquet
 3. **Orchestration Airflow** : 2 DAGs indépendants (ingestion + transformation dbt)
 4. **Modèles dbt** : 5 modèles SQL avec tests et documentation
-   - 1 modèle staging (nettoyage)
+   - 1 modèle staging (nettoyage + enrichissement)
    - 1 modèle intermediate (catégorisations métier)
    - 3 modèles marts (tables analytiques)
 5. **Tests de qualité** : 15 tests automatiques intégrés à dbt
@@ -224,12 +268,14 @@ Taxi_NYC_Analyse/
 │   │       │   ├── intermediate/     # Catégorisations
 │   │       │   └── marts/            # Tables finales
 │   │       └── dbt_project.yml
-│   ├── .env                          # Credentials Snowflake
-│   └── airflow_settings.yaml         # Config Airflow
+│   ├── .env                          # Credentials Snowflake (non versionné)
+│   ├── .env.exemple                  # Template de configuration
+│   └── airflow_settings.yaml         # Config connexions Airflow
 ├── snowflake/
-│   └── workspace/
-│       └── INITIALISATION_WH_DB.sql  # Script setup Snowflake
-└── README.md                         # Cette documentation
+│   └── INITIALISATION_WH_DB.sql      # Script setup Snowflake
+├── Screenshots/                      # Preuves d'exécution
+├── docs/                             # Documentation dbt (GitHub Pages)
+└── README.md
 ```
 
 ---
@@ -259,37 +305,38 @@ Cette documentation inclut :
 
 ### Générer la documentation localement
 
-Pour générer et déployer la documentation dbt manuellement :
-
-#### 1. Générer la documentation depuis le conteneur Airflow
-
 ```bash
-# Générer la documentation avec connexion Snowflake
+# 1. Créer un profil temporaire
+mkdir -p /tmp/dbt_profiles
+cat > /tmp/dbt_profiles/profiles.yml << 'EOF'
+taxi_nyc_pipeline:
+  outputs:
+    dev:
+      type: snowflake
+      account: votre-account-identifier
+      user: dbt_taxi
+      password: votre-mot-de-passe
+      role: TRANSFORM
+      warehouse: NYC_TAXI_WH
+      database: NYC_TAXI_DB
+      schema: RAW
+  target: dev
+EOF
+
+# 2. Générer la documentation depuis le conteneur Airflow
 docker exec $(docker ps -q -f name=scheduler) /bin/bash -c \
   "cd /usr/local/airflow/dags/dbt/taxi_nyc_pipeline && \
-   /usr/local/airflow/dbt_venv/bin/dbt docs generate"
-```
+   /usr/local/airflow/dbt_venv/bin/dbt docs generate --profiles-dir /tmp/dbt_profiles"
 
-#### 2. Copier les fichiers vers le dossier docs/
-
-```bash
-cd /home/dai/Documents/Python_Projects/Taxi_NYC_Analyse
-
-docker cp $(docker ps -q -f name=scheduler):/usr/local/airflow/dags/dbt/taxi_nyc_pipeline/target/index.html docs/
-docker cp $(docker ps -q -f name=scheduler):/usr/local/airflow/dags/dbt/taxi_nyc_pipeline/target/manifest.json docs/
+# 3. Copier les fichiers vers docs/
 docker cp $(docker ps -q -f name=scheduler):/usr/local/airflow/dags/dbt/taxi_nyc_pipeline/target/catalog.json docs/
-docker cp $(docker ps -q -f name=scheduler):/usr/local/airflow/dags/dbt/taxi_nyc_pipeline/target/graph.gpickle docs/
-```
+docker cp $(docker ps -q -f name=scheduler):/usr/local/airflow/dags/dbt/taxi_nyc_pipeline/target/manifest.json docs/
 
-#### 3. Déployer sur GitHub Pages
-
-```bash
+# 4. Pousser sur GitHub Pages
 git add docs/
 git commit -m "Update dbt documentation"
 git push origin main
 ```
-
-La documentation sera automatiquement déployée sur GitHub Pages en 1-2 minutes.
 
 ### Configuration GitHub Pages (première fois uniquement)
 
@@ -298,21 +345,6 @@ La documentation sera automatiquement déployée sur GitHub Pages en 1-2 minutes
 3. **Branch** : `main`
 4. **Folder** : `/docs`
 5. Cliquez sur **Save**
-
-### Configuration optionnelle : Workflow automatique
-
-Pour automatiser la génération de documentation à chaque push, configurez les secrets GitHub :
-
-1. Allez dans **Settings** → **Secrets and variables** → **Actions**
-2. Ajoutez les secrets suivants :
-   - `SNOWFLAKE_ACCOUNT` : Votre identifiant de compte Snowflake
-   - `SNOWFLAKE_USER` : `dbt_taxi`
-   - `SNOWFLAKE_PASSWORD` : Mot de passe de l'utilisateur dbt_taxi
-   - `SNOWFLAKE_ROLE` : `TRANSFORM`
-   - `SNOWFLAKE_WAREHOUSE` : `NYC_TAXI_WH`
-   - `SNOWFLAKE_DATABASE` : `NYC_TAXI_DB`
-
-Le workflow `.github/workflows/deploy-dbt-docs.yml` se déclenchera automatiquement à chaque modification des modèles dbt.
 
 ---
 
@@ -336,6 +368,7 @@ Projet réalisé dans le cadre de la formation Data Engineering - Simplon
 ## Notes
 
 - Les données couvrent l'année 2024 complète (~40M trajets, 12 fichiers Parquet)
+- Les timestamps sont stockés en `NUMBER` (microsecondes epoch) → utiliser `TO_TIMESTAMP(col / 1000000)`
 - Le script d'ingestion est idempotent : relancer ne crée pas de doublons
-- Les tests dbt s'exécutent automatiquement à chaque run
-- La documentation dbt peut être générée avec `dbt docs generate`
+- Les tests dbt s'exécutent automatiquement à chaque run du DAG dbt
+- Les vitesses > 150 mph sont filtrées (erreurs GPS/timestamps dans les données source)
