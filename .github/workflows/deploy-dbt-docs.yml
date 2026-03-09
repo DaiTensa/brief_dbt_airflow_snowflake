@@ -48,6 +48,7 @@ jobs:
       - name: Generate dbt documentation
         run: |
           cd dbt-dag/dags/dbt/taxi_nyc_pipeline
+          dbt deps
           dbt docs generate
       
       - name: Copy documentation to docs folder
