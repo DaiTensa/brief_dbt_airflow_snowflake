@@ -50,27 +50,45 @@ def download_file(year, month):
         logger.warning(f"File not found or error: {url} - Status: {response.status_code}")
         return None
 
+def month_already_loaded(cur, year, month):
+    """Check if data for a given year/month is already in Snowflake to avoid duplicates."""
+    try:
+        cur.execute(
+            f"SELECT COUNT(*) FROM YELLOW_TAXI_TRIPS "
+            f"WHERE YEAR(TPEP_PICKUP_DATETIME) = {year} AND MONTH(TPEP_PICKUP_DATETIME) = {month}"
+        )
+        count = cur.fetchone()[0]
+        return count > 0
+    except Exception:
+        # Table doesn't exist yet
+        return False
+
+
 def ingest_data(years=[2024]):
     conn = get_snowflake_conn()
     cur = conn.cursor()
-    
+
     # Ensure usage of correct schema
     cur.execute(f"USE DATABASE {SF_DATABASE}")
     cur.execute(f"USE SCHEMA {SF_SCHEMA}")
-    
+
     for year in years:
-        for month in range(1, 3):  # Only January and February for testing
-                
+        for month in range(1, 13):  # All 12 months
+
+            if month_already_loaded(cur, year, month):
+                logger.info(f"Data for {year}-{month:02d} already loaded, skipping.")
+                continue
+
             local_file = download_file(year, month)
             if local_file:
                 try:
                     df = pd.read_parquet(local_file)
-                    
+
                     # Basic standardization (columns to uppercase for Snowflake standard)
                     df.columns = [c.upper() for c in df.columns]
-                    
+
                     logger.info(f"Uploading data for {year}-{month:02d} to Snowflake table YELLOW_TAXI_TRIPS...")
-                    
+
                     success, n_chunks, n_rows, _ = write_pandas(
                         conn,
                         df,
@@ -78,9 +96,9 @@ def ingest_data(years=[2024]):
                         auto_create_table=True,
                         chunk_size=100000
                     )
-                    
+
                     logger.info(f"Success: {success}, Chunks: {n_chunks}, Rows: {n_rows}")
-                    
+
                 except Exception as e:
                     logger.error(f"Failed to ingest {local_file}: {e}")
                 finally:

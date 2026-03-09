@@ -35,12 +35,12 @@ models:
     staging:
       +materialized: view
       +schema: STAGING
-      snowflake_warehouse : NYC_TAXI_WH
+      +snowflake_warehouse: NYC_TAXI_WH
     intermediate:
       +materialized: view
       +schema: INTERMEDIATE
-      snowflake_warehouse : NYC_TAXI_WH
+      +snowflake_warehouse: NYC_TAXI_WH
     marts:
       +materialized: table
       +schema: MARTS
-      snowflake_warehouse : NYC_TAXI_WH
+      +snowflake_warehouse: NYC_TAXI_WH

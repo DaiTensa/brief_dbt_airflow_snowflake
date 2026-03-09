@@ -12,9 +12,9 @@ clean_data as (
         cast(RATECODEID as integer) as rate_code_id,
         STORE_AND_FWD_FLAG as store_and_fwd_flag,
 
-        -- Timestamps
-        cast(TPEP_PICKUP_DATETIME as timestamp) as pickup_datetime,
-        cast(TPEP_DROPOFF_DATETIME as timestamp) as dropoff_datetime,
+        -- Timestamps (stored as NUMBER in microseconds epoch)
+        TO_TIMESTAMP(TPEP_PICKUP_DATETIME / 1000000) as pickup_datetime,
+        TO_TIMESTAMP(TPEP_DROPOFF_DATETIME / 1000000) as dropoff_datetime,
 
         -- Trip info
         cast(PASSENGER_COUNT as integer) as passenger_count,
@@ -44,28 +44,34 @@ clean_data as (
     -- Exclude null zones
     and PULOCATIONID is not null
     and DOLOCATIONID is not null
+),
+
+enriched_data as (
+    select
+        *,
+        datediff('minute', pickup_datetime, dropoff_datetime) as duration_minutes,
+        date_part('hour', pickup_datetime) as pickup_hour,
+        date_part('day', pickup_datetime) as pickup_day,
+        date_part('month', pickup_datetime) as pickup_month,
+        date_part('year', pickup_datetime) as pickup_year,
+        dayname(pickup_datetime) as pickup_day_name,
+
+        -- Average speed (miles per hour)
+        case
+            when datediff('minute', pickup_datetime, dropoff_datetime) > 0
+            then (trip_distance / (datediff('minute', pickup_datetime, dropoff_datetime) / 60.0))
+            else 0
+        end as avg_speed_mph,
+
+        -- Tip percentage
+        case
+            when fare_amount > 0 then (tip_amount / fare_amount) * 100
+            else 0
+        end as tip_percentage
+
+    from clean_data
 )
 
-select
-    *,
-    datediff('minute', pickup_datetime, dropoff_datetime) as duration_minutes,
-    date_part('hour', pickup_datetime) as pickup_hour,
-    date_part('day', pickup_datetime) as pickup_day,
-    date_part('month', pickup_datetime) as pickup_month,
-    date_part('year', pickup_datetime) as pickup_year,
-    dayname(pickup_datetime) as pickup_day_name,
-    
-    -- Average speed (miles per hour)
-    case 
-        when datediff('minute', pickup_datetime, dropoff_datetime) > 0 
-        then (trip_distance / (datediff('minute', pickup_datetime, dropoff_datetime) / 60.0))
-        else 0 
-    end as avg_speed_mph,
-
-    -- Tip percentage
-    case
-        when fare_amount > 0 then (tip_amount / fare_amount) * 100
-        else 0
-    end as tip_percentage
-
-from clean_data
+select * from enriched_data
+-- Filter unrealistic speeds (data quality: GPS/timestamp errors)
+where avg_speed_mph <= 150

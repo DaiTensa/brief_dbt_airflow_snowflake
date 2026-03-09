@@ -5,13 +5,13 @@
 
 ## Vue d'ensemble
 
-Ce projet implémente un pipeline de données complet pour analyser ~6 millions de trajets de taxis jaunes de NYC (janvier-février 2024). Il démontre les compétences en ingénierie de données moderne : ingestion automatisée, transformation avec dbt, orchestration avec Airflow, et tests de qualité.
+Ce projet implémente un pipeline de données complet pour analyser ~40 millions de trajets de taxis jaunes de NYC (année 2024). Il couvre l'ingestion automatisée depuis les fichiers Parquet TLC, la transformation multi-couches avec dbt, l'orchestration avec Airflow, et les tests de qualité de données.
 
 ### Dataset
 - **Source** : [NYC Taxi & Limousine Commission](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
-- **Volume** : ~6 millions de trajets (2 mois de test)
+- **Volume** : ~40 millions de trajets (année 2024 complète)
 - **Format** : Fichiers Parquet mensuels
-- **Taille** : ~1.5 GB de données
+- **Taille** : ~8 GB de données
 
 ---
 
@@ -27,10 +27,12 @@ Fichiers Parquet → RAW → STAGING → INTERMEDIATE → MARTS
 1. **RAW** : Données brutes importées (`YELLOW_TAXI_TRIPS`)
 2. **STAGING** : Données nettoyées et enrichies (`stg_yellow_taxi_trips`)
 3. **INTERMEDIATE** : Catégorisations business (`int_trip_metrics`)
-4. **MARTS** : Tables analytiques finales
+4. **MARTS** : Tables analytiques finales (couche de consommation BI)
    - `daily_summary` : Métriques quotidiennes
    - `zone_analysis` : Analyses par zone
    - `hourly_patterns` : Patterns horaires
+
+> **Choix d'architecture** : Le schéma `MARTS` suit la convention standard dbt (*Data Marts* = tables prêtes à consommer par la BI). Une couche `INTERMEDIATE` est ajoutée entre `STAGING` et `MARTS` pour isoler les catégorisations métier (types de trajets, périodes, jours).
 
 ---
 
@@ -87,13 +89,21 @@ Accédez à l'interface : `http://localhost:8080` (admin/admin)
 
 1. Dans Airflow, activez le DAG `taxi_ingestion_dag`
 2. Déclenchez-le manuellement (bouton Play)
-3. **Durée estimée** : 10-20 minutes
-4. **Résultat** : Table `RAW.YELLOW_TAXI_TRIPS` créée avec ~6M lignes
+3. **Durée estimée** : 60-90 minutes (12 mois × ~5 min par fichier)
+4. **Résultat** : Table `RAW.YELLOW_TAXI_TRIPS` créée avec ~40M lignes
+
+> Le script est **idempotent** : si un mois est déjà chargé, il est automatiquement ignoré.
 
 **Vérification dans Snowflake** :
 ```sql
 SELECT COUNT(*) FROM NYC_TAXI_DB.RAW.YELLOW_TAXI_TRIPS;
--- Devrait retourner ~5-6 millions
+-- ~40 millions de trajets (2024 complet)
+
+-- Vérification par mois
+SELECT MONTH(TPEP_PICKUP_DATETIME) as mois, COUNT(*) as nb_trajets
+FROM NYC_TAXI_DB.RAW.YELLOW_TAXI_TRIPS
+GROUP BY 1
+ORDER BY 1;
 ```
 
 **Preuve d'exécution** :
@@ -102,7 +112,7 @@ SELECT COUNT(*) FROM NYC_TAXI_DB.RAW.YELLOW_TAXI_TRIPS;
 *DAG d'ingestion exécuté avec succès dans Airflow*
 
 ![Snowflake - Comptage des données](Screenshots/02_snowflake_raw_data_count.png)
-*Vérification du nombre de lignes chargées dans Snowflake (~5.8M)*
+*Vérification du nombre de lignes chargées dans Snowflake (~40M)*
 
 ![Snowflake - Aperçu des données](Screenshots/03_snowflake_raw_data_preview.png)
 *Aperçu des données brutes dans la table RAW.YELLOW_TAXI_TRIPS*
@@ -185,21 +195,16 @@ dbt test
 
 ---
 
-## Livrables
+## Composants du Projet
 
-### Tronc Commun
 1. **Architecture Snowflake** : 4 schémas (RAW, STAGING, INTERMEDIATE, MARTS)
-2. **Scripts dbt** : 5 modèles SQL documentés
-3. **Documentation** : Ce README avec instructions complètes
-4. **Analyse** : Tests de qualité intégrés (15 tests)
-
-### Options Avancées
-5. **Script Python** : `ingest_data.py` - Automatisation du chargement
-6. **Orchestration Airflow** : 2 DAGs (ingestion + transformation)
-7. **dbt Core** : Modèles avec tests et documentation
-   - 1 modèle staging
-   - 1 modèle intermediate
-   - 3 modèles marts
+2. **Script d'ingestion Python** : `ingest_data.py` — téléchargement et chargement automatisé des fichiers Parquet
+3. **Orchestration Airflow** : 2 DAGs indépendants (ingestion + transformation dbt)
+4. **Modèles dbt** : 5 modèles SQL avec tests et documentation
+   - 1 modèle staging (nettoyage)
+   - 1 modèle intermediate (catégorisations métier)
+   - 3 modèles marts (tables analytiques)
+5. **Tests de qualité** : 15 tests automatiques intégrés à dbt
 
 ---
 
@@ -330,7 +335,7 @@ Projet réalisé dans le cadre de la formation Data Engineering - Simplon
 
 ## Notes
 
-- Les données de test couvrent janvier-février 2024 (~6M trajets)
-- Pour charger l'année complète, modifier `ingest_data.py` ligne 53
+- Les données couvrent l'année 2024 complète (~40M trajets, 12 fichiers Parquet)
+- Le script d'ingestion est idempotent : relancer ne crée pas de doublons
 - Les tests dbt s'exécutent automatiquement à chaque run
 - La documentation dbt peut être générée avec `dbt docs generate`

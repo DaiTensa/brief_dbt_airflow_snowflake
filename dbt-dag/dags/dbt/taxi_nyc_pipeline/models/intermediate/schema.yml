@@ -2,29 +2,41 @@ version: 2
 
 models:
   - name: int_trip_metrics
-    description: "Trajets enrichis avec catégorisations business"
+    description: >
+      Modèle intermédiaire qui hérite de toutes les colonnes nettoyées de stg_yellow_taxi_trips
+      et ajoute trois catégorisations métier : le type de distance, la période temporelle
+      et le type de jour. Ces catégorisations sont utilisées dans les tables MARTS pour
+      segmenter les analyses sans dupliquer la logique dans chaque modèle final.
     columns:
       - name: trip_id
-        description: "Identifiant unique du trajet"
+        description: "Identifiant unique du trajet (clé surrogate héritée du staging)"
         tests:
           - not_null
-      
+
       - name: distance_category
-        description: "Catégorie de distance du trajet"
+        description: >
+          Catégorie de distance calculée depuis trip_distance :
+          'Courts trajets' (≤ 1 mile), 'Trajets moyens' (1-5 miles),
+          'Longs trajets' (5-10 miles), 'Très longs trajets' (> 10 miles).
         tests:
           - not_null
           - accepted_values:
               values: ['Courts trajets', 'Trajets moyens', 'Longs trajets', 'Très longs trajets']
-      
+
       - name: time_period
-        description: "Période temporelle du trajet"
+        description: >
+          Période temporelle calculée depuis pickup_hour :
+          'Rush Matinal' (6h-9h), 'Journée' (10h-15h), 'Rush Soir' (16h-19h),
+          'Soirée' (20h-23h), 'Nuit' (0h-5h).
         tests:
           - not_null
           - accepted_values:
               values: ['Rush Matinal', 'Journée', 'Rush Soir', 'Soirée', 'Nuit']
-      
+
       - name: day_type
-        description: "Type de jour (Semaine ou Weekend)"
+        description: >
+          Type de jour calculé depuis pickup_day_name :
+          'Weekend' (Samedi, Dimanche), 'Semaine' (Lundi au Vendredi).
         tests:
           - not_null
           - accepted_values:
